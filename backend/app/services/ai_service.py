@@ -1,22 +1,22 @@
 """
 ai_service.py - The AI brain of materia-AI.
 
-Takes a dish (name, ingredients, tone) and asks the Anthropic API to
+Takes a dish (name, ingredients, tone) and asks Google's Gemini API to
 generate professional, appetizing menu descriptions in both Spanish
 and English. Returns them as a structured response.
 """
 
 import json
-from anthropic import Anthropic
+from google import genai
 
 from app.config import settings
 from app.schemas import MenuItemRequest, MenuDescriptionResponse
 
 # One shared client, authenticated with the key from config.
-client = Anthropic(api_key=settings.anthropic_api_key)
+client = genai.Client(api_key=settings.gemini_api_key)
 
-# The model we call. Fast and capable for this kind of task.
-MODEL = "claude-sonnet-4-6"
+# The model we call. Fast and free-tier friendly for this kind of task.
+MODEL = "gemini-3.6-flash"
 
 
 def _build_prompt(item: MenuItemRequest) -> str:
@@ -46,14 +46,13 @@ def generate_description(item: MenuItemRequest) -> MenuDescriptionResponse:
 
     prompt = _build_prompt(item)
 
-    message = client.messages.create(
+    response = client.models.generate_content(
         model=MODEL,
-        max_tokens=400,
-        messages=[{"role": "user", "content": prompt}],
+        contents=prompt,
     )
 
     # The AI's reply comes back as text; we expect JSON inside it.
-    raw_text = message.content[0].text.strip()
+    raw_text = response.text.strip()
 
     # Parse the JSON. If the AI ever wraps it in markdown fences,
     # strip them defensively before parsing.

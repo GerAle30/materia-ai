@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     # The Anthropic API key — read from .env, never hard-coded.
     anthropic_api_key: str
+    gemini_api_key: str
 
     # Tells pydantic-settings to read from the .env file.
     model_config = SettingsConfigDict(
