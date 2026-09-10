@@ -20,13 +20,14 @@ def generate_menu_description(item: MenuItemRequest) -> MenuDescriptionResponse:
     """Takes a dish and returns bilingual menu descriptions.
 
     FastAPI validates the incoming request against MenuItemRequest
-    automatically. If the AI call fails, we return a clean 500 error
-    instead of leaking a raw traceback to the client.
+    automatically. We distinguish two failure modes so clients (and
+    our own logs) know what actually went wrong.
     """
     try:
         return generate_description(item)
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to generate description: {error}",
-        )
+    except ConnectionError as error:
+        # The AI provider itself was unreachable — network, quota, auth.
+        raise HTTPException(status_code=503, detail=str(error))
+    except ValueError as error:
+        # The AI responded, but not in the format we expected.
+        raise HTTPException(status_code=502, detail=str(error))

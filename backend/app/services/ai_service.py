@@ -15,9 +15,6 @@ from app.schemas import MenuItemRequest, MenuDescriptionResponse
 # One shared client, authenticated with the key from config.
 client = genai.Client(api_key=settings.gemini_api_key)
 
-# The model we call. Fast and free-tier friendly for this kind of task.
-MODEL = "gemini-3.6-flash"
-
 
 def _build_prompt(item: MenuItemRequest) -> str:
     """Builds the instruction we send to the AI.
@@ -46,10 +43,15 @@ def generate_description(item: MenuItemRequest) -> MenuDescriptionResponse:
 
     prompt = _build_prompt(item)
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-    )
+    try:
+        response = client.models.generate_content(
+            model=settings.gemini_model,
+            contents=prompt,
+        )
+    except Exception as error:
+        # Anything that fails here is a connection/API problem —
+        # network issues, quota limits, auth errors, etc.
+        raise ConnectionError(f"Could not reach the AI provider: {error}") from error
 
     # The AI's reply comes back as text; we expect JSON inside it.
     raw_text = response.text.strip()
@@ -57,10 +59,17 @@ def generate_description(item: MenuItemRequest) -> MenuDescriptionResponse:
     # Parse the JSON. If the AI ever wraps it in markdown fences,
     # strip them defensively before parsing.
     cleaned = raw_text.replace("```json", "").replace("```", "").strip()
-    data = json.loads(cleaned)
+
+    try:
+        data = json.loads(cleaned)
+        description_es = data["description_es"]
+        description_en = data["description_en"]
+    except (json.JSONDecodeError, KeyError) as error:
+        # The model responded, but not in the shape we asked for.
+        raise ValueError(f"AI returned an unexpected format: {error}") from error
 
     return MenuDescriptionResponse(
         name=item.name,
-        description_es=data["description_es"],
-        description_en=data["description_en"],
+        description_es=description_es,
+        description_en=description_en,
     )
