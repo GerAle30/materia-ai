@@ -10,7 +10,7 @@ a simple health-check route. Run with:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import menu
+from app.routers import menu, inventory
 
 # Create the FastAPI application instance.
 app = FastAPI(
@@ -31,6 +31,7 @@ app.add_middleware(
 
 # Plug in the menu router — this activates /menu/generate.
 app.include_router(menu.router)
+app.include_router(inventory.router)
 
 
 @app.get("/")

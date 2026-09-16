@@ -24,7 +24,7 @@ class Ingredient(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # One ingredinets can have any recorded movements (purchase, uses).
-    movements = relationship("InvenoryMovement", back_populates="ingredient")
+    movements = relationship("InventoryMovement", back_populates="ingredient")
 
     class InventoryMovement(Base):
         """A single change in stock - a purchase, a use in the kitchen , waste."""
